@@ -1,0 +1,76 @@
+---
+title: "Simple_rnaseq_analysis"
+author: "Mario Ruiz Pérez"
+date: "4/6/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading data
+
+The data was previously cleaned using unix pipline. The cleansing consisted on removing missing `NA` and zero `0,0` values.
+
+```{r rnaseq}
+data = read.csv("genecounts.clean.tsv",sep="\t",header = TRUE, dec=",")
+
+head(data)
+```
+As it can be seen, data consists of 5 columns. First one being an gene cDNA id and the other 4 the results of the read.
+
+### Length
+
+```{r rnastats}
+rows = nrow(data)
+```
+There is `r rows` columns.
+
+## max cDNA count control_2
+
+```{r}
+max(data$control_2)
+```
+
+## Scatter plot
+
+```{r}
+data$treated_m = rowMeans(data[,c('treated_1','treated_2')])
+data$control_m = rowMeans(data[,c('control_1','control_2')])
+
+plot(data$treated_m,data$control_m,
+     main="Control vs treated read counts",
+     xlab="mean treated counts",
+     ylab="mean control counts")
+
+regresion <- lm(treated_m ~ control_m, data=data)
+abline(regresion,col='red')
+abline(a=0,b=1,col='blue')
+```
+We can see a fairly linear expresion pattern through control and treated counts. This could mean that there is no differential expression between the two conditions.
+
+```{r}
+x = rowMeans(data[,2:5])
+y = log2(data$treated_m/data$control_m)
+
+plot(x,y,
+     main="cDNA count values vs treated/control log2",
+     xlab="cDNA counts",
+     ylab="log2 treated/controls")
+```
+It seems to arise a pattern where cDNA counts are uniformly distributed around 0, we can also observe that there are some measurements close to 0 where the deviation is 2 to 4 fold, which is up to 20 times more counts. This could mean that, at least in lower cDNA counts, there is a significative difference between cases/controls. 
+
+Nevertheless the apparently normal distribution below the data makes me doubt about this assumption, this can be statistical artifacts due to natural random variation. This is also remarkable on lower counts, where small changes can greatly affect de log2.
+
+Let's try to restrict higher values and see the underlying distribution.
+
+```{r}
+logData = data.frame(x,y)
+
+filterLogData = logData[which(logData$x<10000),]
+
+plot(filterLogData$x, filterLogData$y)
+```
+
+
