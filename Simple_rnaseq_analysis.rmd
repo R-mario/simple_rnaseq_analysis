@@ -2,7 +2,9 @@
 title: "Simple_rnaseq_analysis"
 author: "Mario Ruiz Pérez"
 date: "4/6/2022"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -48,29 +50,29 @@ regresion <- lm(treated_m ~ control_m, data=data)
 abline(regresion,col='red')
 abline(a=0,b=1,col='blue')
 ```
-We can see a fairly linear expresion pattern through control and treated counts. This could mean that there is no differential expression between the two conditions.
+
+We can see a little deviation from the expected line, this could mean two different things:
+
+1.The treatment reduces the total rna produced 
+2.There is some sort of systematic bias.
+
+The second option is more likely, in either case this should be taken into account when finding differential expressed genes.
+
+Now we use the logarithm of the division to find differential expressed genes. It is used this method instead simple division for making the results more readable, compacting the plot.
 
 ```{r}
-x = rowMeans(data[,2:5])
-y = log2(data$treated_m/data$control_m)
+data$log = log2(data$treated_m/data$control_m)
+data$color[data$log > 2.5 | data$log < -2.5] = 'red'
+data$color[data$log < 2.5 & data$log > -2.5] = 'grey'
 
-plot(x,y,
-     main="cDNA count values vs treated/control log2",
-     xlab="cDNA counts",
+plot(data$log,
+     col=data$color,
+     main="Differential expression",
+     xlab="gene index",
      ylab="log2 treated/controls")
 ```
-It seems to arise a pattern where cDNA counts are uniformly distributed around 0, we can also observe that there are some measurements close to 0 where the deviation is 2 to 4 fold, which is up to 20 times more counts. This could mean that, at least in lower cDNA counts, there is a significative difference between cases/controls. 
 
-Nevertheless the apparently normal distribution below the data makes me doubt about this assumption, this can be statistical artifacts due to natural random variation. This is also remarkable on lower counts, where small changes can greatly affect de log2.
+It seems to arise a pattern where cDNA counts are slightly under 0 as we expected from the previous plot, we can also observe that there are some measurements which its deviation is 2 to 4 fold, which is up to 20 times more counts. In those cases (2.5 threshold) its more likely that there is a differential expression. More than 4 fold change probably indicates an outlier.
 
-Let's try to restrict higher values and see the underlying distribution.
-
-```{r}
-logData = data.frame(x,y)
-
-filterLogData = logData[which(logData$x<10000),]
-
-plot(filterLogData$x, filterLogData$y)
-```
 
 
